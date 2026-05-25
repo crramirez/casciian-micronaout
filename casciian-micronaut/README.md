@@ -45,7 +45,7 @@ subproject.
 
 ```groovy
 dependencies {
-    implementation 'io.github.crramirez:casciian-micronaut:0.1.0-SNAPSHOT'
+    implementation 'io.github.crramirez:casciian-micronaut:1.0.0-SNAPSHOT'
 }
 ```
 

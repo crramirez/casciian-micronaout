@@ -30,7 +30,7 @@ import static org.mockito.Mockito.when;
 /**
  * Black-box tests for {@link ProductFakerSeeder}. We exercise the contract
  * an operator cares about &mdash; idempotency, the right number of
- * products, basic data sanity &mdash; without spinning up Spring or H2.
+ * products, basic data sanity &mdash; without spinning up Micronaut or H2.
  */
 class ProductFakerSeederTest {
 
