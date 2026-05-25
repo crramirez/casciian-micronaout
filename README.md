@@ -19,8 +19,11 @@ This Gradle multi-project hosts:
 # Build everything (library + demo) and run the JUnit suite
 ./gradlew build
 
-# Run the JVM demo
+# Run the JVM demo directly via Gradle
 ./gradlew :demo-shop:run
+
+# Or run the standalone fat JAR (all dependencies bundled)
+java -jar demo-shop/build/libs/demo-shop-*-all.jar
 
 # Build the GraalVM native executable for the demo
 # (requires a GraalVM 21 + native-image installation on PATH)
@@ -39,7 +42,7 @@ Once `demo-shop` is up:
   * Over SSH: `ssh admin@localhost -p 2222` (password `admin`).
   * Over a Unix domain socket (e.g. from inside the container via
     `docker exec` / `kubectl exec`): re-invoke the same JAR or native
-    binary with the `console` argument — `java -jar build/libs/demo-shop-*.jar console`
+    binary with the `console` argument — `java -jar demo-shop-*-all.jar console`
     or `./demo-shop console` — and it acts as a thin terminal client
     that attaches to the running JVM via `/tmp/casciian.sock`.
 

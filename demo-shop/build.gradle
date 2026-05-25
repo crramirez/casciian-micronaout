@@ -69,10 +69,80 @@ tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
 
-// This is a demo, not a published library; don't produce an empty plain
-// jar alongside the Micronaut runnable jar / native image.
-tasks.named('jar') {
-    enabled = false
+// The fat jar bundles every dependency so `java -jar demo-shop-<version>-all.jar`
+// works standalone without a `libs/` directory. Service-loader descriptors
+// (META-INF/services/*) are concatenated so all provider implementations
+// survive the merge.
+tasks.register('fatJar', Jar) {
+    archiveClassifier = 'all'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    manifest {
+        attributes 'Main-Class': application.mainClass.get()
+    }
+    // First: merge META-INF/services files by concatenation so that
+    // all provider implementations from every jar are preserved.
+    doFirst {
+        def servicesDir = layout.buildDirectory.dir("fatjar-services/META-INF/services").get().asFile
+        servicesDir.deleteDir()
+        servicesDir.mkdirs()
+        def allServices = new LinkedHashMap<String, StringBuilder>()
+
+        // Collect from all dependency jars
+        configurations.runtimeClasspath.files.each { f ->
+            if (f.name.endsWith('.jar')) {
+                def zf = new java.util.zip.ZipFile(f)
+                try {
+                    zf.entries().each { entry ->
+                        if (entry.name.startsWith('META-INF/services/') && !entry.isDirectory()) {
+                            def svcName = entry.name.substring('META-INF/services/'.length())
+                            // Only handle standard service files (no sub-paths)
+                            if (!svcName.contains('/')) {
+                                if (!allServices.containsKey(svcName)) {
+                                    allServices[svcName] = new StringBuilder()
+                                }
+                                allServices[svcName].append(zf.getInputStream(entry).text).append('\n')
+                            }
+                        }
+                    }
+                } finally {
+                    zf.close()
+                }
+            }
+        }
+        // Also include services from the project's own compiled resources
+        def projectServices = new File(sourceSets.main.output.resourcesDir, "META-INF/services")
+        if (projectServices.exists()) {
+            projectServices.eachFile { sf ->
+                if (!sf.isDirectory()) {
+                    if (!allServices.containsKey(sf.name)) {
+                        allServices[sf.name] = new StringBuilder()
+                    }
+                    allServices[sf.name].append(sf.text).append('\n')
+                }
+            }
+        }
+        allServices.each { name, content ->
+            new File(servicesDir, name).text = content.toString()
+        }
+    }
+
+    // Include the merged services directory first (takes priority via EXCLUDE strategy)
+    from(layout.buildDirectory.dir("fatjar-services"))
+    // Include all dependency jars (exploded), skipping their services
+    from({
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }) {
+        exclude 'META-INF/services/**'
+        exclude 'module-info.class'
+    }
+    // Include the project's own compiled classes + resources, skipping services (already merged above)
+    from(sourceSets.main.output) {
+        exclude 'META-INF/services/**'
+    }
+}
+
+tasks.named('assemble') {
+    dependsOn 'fatJar'
 }
 
 graalvmNative {
