@@ -1,0 +1,17 @@
+micronaut:
+  application:
+    name: casciian-demo-shop
+  server:
+    port: 8080
+
+casciian:
+  ssh:
+    enabled: true
+    host: 127.0.0.1
+    port: 2222
+    username: admin
+    password: admin
+    banner: "Welcome to the Casciian Micronaut Demo Shop admin console"
+  unix-socket:
+    enabled: true
+    path: /tmp/casciian.sock
