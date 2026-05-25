@@ -1,0 +1,169 @@
+plugins {
+    id 'io.micronaut.application' version "${micronautPluginVersion}"
+}
+
+description = 'Customer-facing web shop demo wired to a Casciian admin TUI via the casciian-micronaut integration. Builds a GraalVM native executable.'
+
+application {
+    mainClass = 'io.github.crramirez.casciian.demo.shop.DemoShopApplication'
+}
+
+micronaut {
+    version "${micronautVersion}"
+    runtime 'netty'
+    testRuntime 'junit5'
+    processing {
+        incremental true
+        annotations 'io.github.crramirez.casciian.demo.shop.*'
+    }
+    // Ahead-of-time optimizations are skipped: the Micronaut AOT plugin
+    // forks a JVM whose version we cannot reliably pin to the project's
+    // Java 21 toolchain in every CI environment. Re-enable by adding
+    //   id 'io.micronaut.aot' version "${micronautPluginVersion}"
+    // to the `plugins {}` block above and wiring an `aot {}` block here;
+    // the native binary works fine without it, just with a slightly
+    // higher startup cost.
+}
+
+dependencies {
+    // The integration under development. Using a project dependency means
+    // we always exercise the local sources, not whatever is on Maven Central.
+    implementation project(':casciian-micronaut')
+
+    // Customer-facing web UI.
+    implementation 'io.micronaut:micronaut-http-server-netty'
+    implementation 'io.micronaut:micronaut-jackson-databind'
+    implementation 'io.micronaut.views:micronaut-views-thymeleaf'
+
+    // Persistence: Micronaut Data JDBC + H2 driver. JDBC is preferred over
+    // JPA in this demo because it generates compile-time queries (no
+    // runtime reflection / Hibernate), which keeps the GraalVM native
+    // build small and stable.
+    implementation "io.micronaut.data:micronaut-data-jdbc"
+    implementation 'io.micronaut.sql:micronaut-jdbc-hikari'
+    annotationProcessor "io.micronaut.data:micronaut-data-processor"
+    runtimeOnly 'com.h2database:h2'
+
+    // Faker library used to seed the in-memory database at startup.
+    implementation "net.datafaker:datafaker:${datafakerVersion}"
+
+    // Runtime logging.
+    runtimeOnly 'ch.qos.logback:logback-classic'
+    runtimeOnly 'org.yaml:snakeyaml'
+
+    // Tests.
+    testImplementation 'io.micronaut:micronaut-http-client'
+    testImplementation 'org.assertj:assertj-core:3.27.7'
+    testImplementation 'org.mockito:mockito-core:5.14.2'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.14.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+// The fat jar bundles every dependency so `java -jar demo-shop-<version>-all.jar`
+// works standalone without a `libs/` directory. Service-loader descriptors
+// (META-INF/services/*) are concatenated so all provider implementations
+// survive the merge.
+tasks.register('fatJar', Jar) {
+    archiveClassifier = 'all'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    dependsOn ':casciian-micronaut:jar'
+    manifest {
+        attributes 'Main-Class': application.mainClass.get()
+    }
+    // First: merge META-INF/services files by concatenation so that
+    // all provider implementations from every jar are preserved.
+    doFirst {
+        def servicesDir = layout.buildDirectory.dir("fatjar-services/META-INF/services").get().asFile
+        servicesDir.deleteDir()
+        servicesDir.mkdirs()
+        def allServices = new LinkedHashMap<String, StringBuilder>()
+
+        // Collect from all dependency jars
+        configurations.runtimeClasspath.files.each { f ->
+            if (f.name.endsWith('.jar')) {
+                def zf = new java.util.zip.ZipFile(f)
+                try {
+                    zf.entries().each { entry ->
+                        if (entry.name.startsWith('META-INF/services/') && !entry.isDirectory()) {
+                            def svcName = entry.name.substring('META-INF/services/'.length())
+                            // Only handle standard service files (no sub-paths)
+                            if (!svcName.contains('/')) {
+                                if (!allServices.containsKey(svcName)) {
+                                    allServices[svcName] = new StringBuilder()
+                                }
+                                allServices[svcName].append(zf.getInputStream(entry).text).append('\n')
+                            }
+                        }
+                    }
+                } finally {
+                    zf.close()
+                }
+            }
+        }
+        // Also include services from the project's own compiled resources
+        def projectServices = new File(sourceSets.main.output.resourcesDir, "META-INF/services")
+        if (projectServices.exists()) {
+            projectServices.eachFile { sf ->
+                if (!sf.isDirectory()) {
+                    if (!allServices.containsKey(sf.name)) {
+                        allServices[sf.name] = new StringBuilder()
+                    }
+                    allServices[sf.name].append(sf.text).append('\n')
+                }
+            }
+        }
+        allServices.each { name, content ->
+            new File(servicesDir, name).text = content.toString()
+        }
+    }
+
+    // Include the merged services directory first (takes priority via EXCLUDE strategy)
+    from(layout.buildDirectory.dir("fatjar-services"))
+    // Include all dependency jars (exploded), skipping their services
+    from({
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }) {
+        exclude 'META-INF/services/**'
+        exclude 'module-info.class'
+    }
+    // Include the project's own compiled classes + resources, skipping services (already merged above)
+    from(sourceSets.main.output) {
+        exclude 'META-INF/services/**'
+    }
+}
+
+tasks.named('assemble') {
+    dependsOn 'fatJar'
+}
+
+graalvmNative {
+    binaries {
+        main {
+            // Image name and reflection hints. The Micronaut Gradle plugin
+            // contributes Micronaut-wide hints automatically; we add a few
+            // for Casciian classes that are reached only via reflection
+            // (TWindow subclasses are constructed by name in some
+            // ECMA48 codepaths).
+            imageName = 'demo-shop'
+            buildArgs.addAll(
+                    '--no-fallback',
+                    '-H:+UnlockExperimentalVMOptions',
+                    '-H:IncludeResources=.*\\.html$',
+                    '-H:IncludeResources=.*\\.yml$',
+                    '-H:IncludeResources=.*\\.yaml$',
+                    '-H:IncludeResources=logback\\.xml',
+                    '-H:IncludeResources=application\\.yml'
+            )
+        }
+    }
+}

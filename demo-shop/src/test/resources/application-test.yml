@@ -1,0 +1,16 @@
+datasources:
+  default:
+    url: jdbc:h2:mem:demoshop-test;DB_CLOSE_DELAY=-1;MODE=LEGACY
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+    schema-generate: CREATE_DROP
+    dialect: H2
+
+# Disable both Casciian transports so the test suite does not bind to a
+# privileged-ish TCP port or touch the file system.
+casciian:
+  ssh:
+    enabled: false
+  unix-socket:
+    enabled: false

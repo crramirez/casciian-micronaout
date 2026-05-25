@@ -1,0 +1,48 @@
+// Root build file for the `casciian-micronaut` multi-project.
+//
+// The root project is purely organizational: it produces no artifacts. Each
+// subproject manages its own plugins. We only configure cross-cutting basics
+// that every Java module benefits from (encoding, JUnit Platform, repository)
+// so each subproject `build.gradle` can stay focused on what makes it
+// different.
+
+// Declare the Micronaut + GraalVM plugins at the root with `apply false`
+// so each subproject reuses the same plugin classloader. Without this,
+// the GraalVM Reachability Metadata service is loaded twice (once per
+// subproject classloader) and Gradle refuses to wire the build.
+plugins {
+    id 'io.micronaut.library' version "${micronautPluginVersion}" apply false
+    id 'io.micronaut.application' version "${micronautPluginVersion}" apply false
+    id 'io.micronaut.aot' version "${micronautPluginVersion}" apply false
+}
+
+allprojects {
+    group = 'io.github.crramirez'
+
+    repositories {
+        mavenCentral()
+    }
+}
+
+subprojects {
+    plugins.withId('java') {
+        java {
+            toolchain {
+                languageVersion = JavaLanguageVersion.of(21)
+            }
+        }
+
+        tasks.withType(JavaCompile).configureEach {
+            options.encoding = 'UTF-8'
+        }
+
+        tasks.withType(Test).configureEach {
+            useJUnitPlatform()
+            testLogging {
+                events 'passed', 'skipped', 'failed'
+                exceptionFormat = 'full'
+                showStandardStreams = false
+            }
+        }
+    }
+}
