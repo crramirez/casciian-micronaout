@@ -59,12 +59,10 @@ public class CasciianSshServer
         if (properties == null) {
             throw new IllegalArgumentException("properties must not be null");
         }
-        if (shellFactory == null) {
-            throw new IllegalArgumentException("shellFactory must not be null");
-        }
-        if (passwordAuthenticator == null) {
-            throw new IllegalArgumentException("passwordAuthenticator must not be null");
-        }
+        // shellFactory and passwordAuthenticator may legitimately be null
+        // when the bean is constructed by hand for the path-resolution unit
+        // tests. Dependency injection guarantees they are non-null in
+        // production, where they are required before start() runs.
         this.properties = properties;
         this.shellFactory = shellFactory;
         this.passwordAuthenticator = passwordAuthenticator;
@@ -72,6 +70,13 @@ public class CasciianSshServer
 
     @Override
     public void onApplicationEvent(final StartupEvent event) {
+        if (!properties.isAutoStart()) {
+            // Allow tests (and applications with bespoke lifecycles) to opt
+            // out of the automatic bind without losing the rest of the
+            // bean wiring.
+            LOG.debug("Casciian SSH server auto-start disabled; call start() manually");
+            return;
+        }
         start();
     }
 

@@ -34,8 +34,18 @@ public class CasciianSshProperties {
     @SuppressWarnings("java:S1075")
     public static final String DEFAULT_HOST_KEY_PATH = "~/.casciian/ssh_host_key";
 
-    /** Whether the SSH server should start. Defaults to {@code true}. */
+    /**
+     * Whether the SSH server should start. Defaults to {@code true}. */
     private boolean enabled = true;
+
+    /**
+     * Whether the SSH server should auto-start when the application
+     * publishes its {@link io.micronaut.context.event.StartupEvent}.
+     * Defaults to {@code true}. Set to {@code false} in tests (or other
+     * scenarios where you want to control startup explicitly) to suppress
+     * the network bind while still exercising bean wiring.
+     */
+    private boolean autoStart = true;
 
     /** Interface to bind to. Defaults to {@link #DEFAULT_HOST}. */
     private String host = DEFAULT_HOST;
@@ -75,6 +85,14 @@ public class CasciianSshProperties {
 
     public void setEnabled(final boolean enabled) {
         this.enabled = enabled;
+    }
+
+    public boolean isAutoStart() {
+        return autoStart;
+    }
+
+    public void setAutoStart(final boolean autoStart) {
+        this.autoStart = autoStart;
     }
 
     public String getHost() {

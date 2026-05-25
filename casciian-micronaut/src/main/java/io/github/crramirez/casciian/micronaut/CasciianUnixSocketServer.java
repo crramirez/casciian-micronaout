@@ -82,6 +82,13 @@ public class CasciianUnixSocketServer
 
     @Override
     public void onApplicationEvent(final StartupEvent event) {
+        if (!properties.isAutoStart()) {
+            // Skip the actual socket bind so tests and bespoke lifecycles
+            // can introspect the bean wiring without touching the file
+            // system.
+            LOG.debug("Casciian Unix-socket listener auto-start disabled; call start() manually");
+            return;
+        }
         start();
     }
 

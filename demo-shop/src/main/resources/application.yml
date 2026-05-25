@@ -1,0 +1,40 @@
+micronaut:
+  application:
+    name: casciian-demo-shop
+  server:
+    port: 8080
+  views:
+    thymeleaf:
+      enabled: true
+      suffix: .html
+
+# Micronaut Data JDBC: use an H2 in-memory database and let the data
+# layer generate the schema from the @MappedEntity definitions on
+# startup. This keeps the demo dependency-free (no Flyway/Liquibase).
+datasources:
+  default:
+    url: jdbc:h2:mem:demoshop;DB_CLOSE_DELAY=-1;MODE=LEGACY
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+    schema-generate: CREATE_DROP
+    dialect: H2
+
+# Casciian admin TUI exposed by the casciian-micronaut integration.
+# Connect with: ssh admin@localhost -p 2222   (password: admin)
+casciian:
+  ssh:
+    enabled: true
+    host: 127.0.0.1
+    port: 2222
+    username: admin
+    password: admin
+    banner: "Welcome to the Casciian Demo Shop admin TUI"
+  unix-socket:
+    enabled: true
+    path: /tmp/casciian.sock
+    permissions: "600"
+
+logger:
+  levels:
+    org.apache.sshd: WARN

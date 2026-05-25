@@ -50,6 +50,14 @@ public class CasciianUnixSocketProperties {
     private boolean enabled = false;
 
     /**
+     * Whether the Unix-socket listener should auto-start when the
+     * application publishes its {@link io.micronaut.context.event.StartupEvent}.
+     * Defaults to {@code true}. Set to {@code false} in tests where you
+     * want to exercise bean wiring without actually binding a socket file.
+     */
+    private boolean autoStart = true;
+
+    /**
      * Filesystem path where the Unix-domain socket file is created. A
      * leading {@code ~} is expanded to the user home directory. The parent
      * directory must exist or be creatable.
@@ -69,6 +77,14 @@ public class CasciianUnixSocketProperties {
 
     public void setEnabled(final boolean enabled) {
         this.enabled = enabled;
+    }
+
+    public boolean isAutoStart() {
+        return autoStart;
+    }
+
+    public void setAutoStart(final boolean autoStart) {
+        this.autoStart = autoStart;
     }
 
     public String getPath() {
