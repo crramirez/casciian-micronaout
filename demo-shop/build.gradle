@@ -76,6 +76,7 @@ tasks.withType(JavaCompile).configureEach {
 tasks.register('fatJar', Jar) {
     archiveClassifier = 'all'
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    dependsOn ':casciian-micronaut:jar'
     manifest {
         attributes 'Main-Class': application.mainClass.get()
     }
