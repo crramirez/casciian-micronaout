@@ -6,6 +6,16 @@
 // so each subproject `build.gradle` can stay focused on what makes it
 // different.
 
+// Declare the Micronaut + GraalVM plugins at the root with `apply false`
+// so each subproject reuses the same plugin classloader. Without this,
+// the GraalVM Reachability Metadata service is loaded twice (once per
+// subproject classloader) and Gradle refuses to wire the build.
+plugins {
+    id 'io.micronaut.library' version "${micronautPluginVersion}" apply false
+    id 'io.micronaut.application' version "${micronautPluginVersion}" apply false
+    id 'io.micronaut.aot' version "${micronautPluginVersion}" apply false
+}
+
 allprojects {
     group = 'io.github.crramirez'
 

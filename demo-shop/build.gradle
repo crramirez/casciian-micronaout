@@ -1,6 +1,5 @@
 plugins {
     id 'io.micronaut.application' version "${micronautPluginVersion}"
-    id 'io.micronaut.aot' version "${micronautPluginVersion}"
 }
 
 description = 'Customer-facing web shop demo wired to a Casciian admin TUI via the casciian-micronaut integration. Builds a GraalVM native executable.'
@@ -17,17 +16,13 @@ micronaut {
         incremental true
         annotations 'io.github.crramirez.casciian.demo.shop.*'
     }
-    aot {
-        // Ahead-of-time optimizations make startup faster and reduce
-        // reflection at runtime, which native-image rewards.
-        optimizeServiceLoading = true
-        convertYamlToJava = true
-        precomputeOperations = true
-        cacheEnvironment = true
-        optimizeClassLoading = true
-        deduceEnvironment = true
-        optimizeNetty = true
-    }
+    // Ahead-of-time optimizations are skipped: the Micronaut AOT plugin
+    // forks a JVM whose version we cannot reliably pin to the project's
+    // Java 21 toolchain in every CI environment. Re-enable by adding
+    //   id 'io.micronaut.aot' version "${micronautPluginVersion}"
+    // to the `plugins {}` block above and wiring an `aot {}` block here;
+    // the native binary works fine without it, just with a slightly
+    // higher startup cost.
 }
 
 dependencies {
