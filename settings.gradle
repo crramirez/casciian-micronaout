@@ -1,0 +1,4 @@
+rootProject.name = 'casciian-micronaut'
+
+include 'casciian-micronaut'
+include 'demo-shop'
