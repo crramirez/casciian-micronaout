@@ -39,7 +39,7 @@ import io.github.crramirez.casciian.demo.shop.ProductRepository;
  *
  * <p>Each SSH connection gets its own instance because Casciian
  * {@code TApplication} owns mutable UI state. The {@link ProductRepository}
- * is shared (it's a singleton Spring bean) so all operators &mdash; and the
+ * is shared (it's a singleton Micronaut bean) so all operators &mdash; and the
  * customer-facing web UI &mdash; see the same data.</p>
  */
 public class AdminTApplication extends TApplication {

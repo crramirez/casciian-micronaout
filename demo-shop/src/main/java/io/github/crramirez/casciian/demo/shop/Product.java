@@ -132,10 +132,11 @@ public class Product {
 
     @Override
     public int hashCode() {
-        // Use a constant for transient entities so that adding an unsaved
-        // product to a collection and then persisting it (which mutates id)
-        // does not corrupt hash-based lookups.
-        return id == null ? 0 : id.hashCode();
+        // Use a constant class-based hash code so that the value remains
+        // stable across the entity lifecycle — adding an unsaved product to
+        // a collection and then persisting it (which mutates id) does not
+        // corrupt hash-based lookups.
+        return Product.class.hashCode();
     }
 
     @Override

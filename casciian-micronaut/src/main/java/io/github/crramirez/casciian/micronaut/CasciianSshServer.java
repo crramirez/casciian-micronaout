@@ -16,7 +16,6 @@ import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicReference;
 
 import io.micronaut.context.event.ApplicationEventListener;
-import io.micronaut.context.event.ShutdownEvent;
 import io.micronaut.context.event.StartupEvent;
 import jakarta.annotation.PreDestroy;
 
@@ -31,8 +30,8 @@ import org.slf4j.LoggerFactory;
  * Lifecycle-aware bean that owns the embedded MINA
  * {@link SshServer}. It is started when Micronaut publishes
  * {@link StartupEvent} (after the rest of the application context has
- * finished bootstrapping) and stopped on {@link ShutdownEvent} (or via
- * {@link PreDestroy} as a safety net).
+ * finished bootstrapping) and stopped via {@link PreDestroy} when the
+ * application context closes.
  *
  * <p>In Micronaut there is no equivalent of Spring's {@code SmartLifecycle}
  * phase ordering &mdash; bean creation and event delivery happen in
@@ -81,9 +80,7 @@ public class CasciianSshServer
     }
 
     /**
-     * Shutdown hook backing the Micronaut {@link ShutdownEvent}. Declared
-     * separately so the same logic can be invoked from {@link PreDestroy}
-     * and from unit tests.
+     * Starts the embedded SSH server, binding to the configured host and port.
      */
     public synchronized void start() {
         if (running) {

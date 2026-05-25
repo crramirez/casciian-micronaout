@@ -30,7 +30,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * Tiny in-container client for the Casciian Unix-socket listener.
  *
  * <p>The class is designed to be invoked from a Micronaut application's
- * {@code main} method <em>before</em> {@link org.springframework.boot.SpringApplication#run}
+ * {@code main} method <em>before</em> {@link io.micronaut.runtime.Micronaut#run}
  * — typically when the user passes a dedicated argument such as
  * {@code console} to {@code java -jar app.jar console}. In that mode the
  * Micronaut context is <strong>not</strong> started; the JVM only opens a
